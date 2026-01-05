@@ -581,19 +581,6 @@
         .review-summary-label { font-size: 0.85em; color: #666; }
         .back-to-results { position: sticky; bottom: 20px; margin-top: 20px; }
         
-        .view-details-btn {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.8em;
-            transition: all 0.2s;
-        }
-        
-        .view-details-btn:hover { background: var(--primary-dark); }
-        
         .final-result-box {
             background: linear-gradient(135deg, rgba(46, 125, 50, 0.1) 0%, rgba(46, 125, 50, 0.2) 100%);
             border: 2px solid var(--success);
@@ -677,7 +664,6 @@
     </style>
 </head>
 <body>
-    <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay hidden">
         <div class="spinner"></div>
         <p class="loading-text" id="loadingText">Cargando...</p>
@@ -694,7 +680,7 @@
                 <div class="form-row-3">
                     <div class="form-group">
                         <label>Usuario<span class="required">*</span></label>
-                        <input type="text" id="userId" placeholder="Ej: jperez">
+                        <input type="text" id="odUserId" placeholder="Ej: jperez">
                         <p class="error-message" id="userIdError">El usuario es obligatorio</p>
                     </div>
                     <div class="form-group">
@@ -1012,7 +998,7 @@
         // ============================================
         
         let state = {
-            userId: '',
+            odUserId: '',
             firstName: '',
             lastName: '',
             testType: null,
@@ -1044,7 +1030,7 @@
         const elements = {
             loadingOverlay: document.getElementById('loadingOverlay'),
             loadingText: document.getElementById('loadingText'),
-            userId: document.getElementById('userId'),
+            odUserId: document.getElementById('odUserId'),
             userIdError: document.getElementById('userIdError'),
             firstName: document.getElementById('firstName'),
             firstNameError: document.getElementById('firstNameError'),
@@ -1116,7 +1102,7 @@
 
         async function sendToGoogleSheets(data) {
             try {
-                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
@@ -1131,10 +1117,13 @@
 
         async function fetchFromGoogleSheets() {
             try {
-                const response = await fetch(GOOGLE_SCRIPT_URL);
-                const result = await response.json();
-                if (result.success) {
-                    state.sheetsData = result.data || [];
+                const response = await fetch(GOOGLE_SCRIPT_URL + '?t=' + Date.now());
+                const text = await response.text();
+                console.log('Respuesta de Google Sheets:', text);
+                
+                const result = JSON.parse(text);
+                if (result.success && result.data) {
+                    state.sheetsData = result.data;
                     processUserAttempts();
                     return true;
                 }
@@ -1148,9 +1137,9 @@
         function processUserAttempts() {
             state.userAttempts = {};
             state.sheetsData.forEach(row => {
-                const odUserId = (row.Usuario || '').toLowerCase().trim();
-                const testType = row.TipoPrueba || '';
-                const puntajeStr = row.Puntaje || '0/15';
+                const odUserId = String(row.Usuario || '').toLowerCase().trim();
+                const testType = normalizeTestType(String(row.TipoPrueba || ''));
+                const puntajeStr = String(row.Puntaje || '0/15');
                 const puntaje = parseInt(puntajeStr.split('/')[0]) || 0;
                 
                 if (odUserId && testType) {
@@ -1162,6 +1151,15 @@
                     state.userAttempts[key].bestScore = Math.max(state.userAttempts[key].bestScore, puntaje);
                 }
             });
+            console.log('Intentos procesados:', state.userAttempts);
+        }
+
+        function normalizeTestType(testType) {
+            const type = testType.toLowerCase().trim();
+            if (type.includes('minorista') || type === 'minorista') return 'minorista';
+            if (type.includes('empresarial') || type === 'empresarial') return 'empresarial';
+            if (type.includes('recuperaciones') || type === 'recuperaciones') return 'recuperaciones';
+            return type;
         }
 
         function getUserAttemptData(odUserId, testType) {
@@ -1215,7 +1213,7 @@
         }
 
         function clearErrors() {
-            elements.userId.classList.remove('error');
+            elements.odUserId.classList.remove('error');
             elements.firstName.classList.remove('error');
             elements.lastName.classList.remove('error');
             elements.userIdError.classList.remove('show');
@@ -1228,8 +1226,8 @@
             clearErrors();
             let isValid = true;
 
-            if (!state.userId.trim()) {
-                elements.userId.classList.add('error');
+            if (!state.odUserId.trim()) {
+                elements.odUserId.classList.add('error');
                 elements.userIdError.classList.add('show');
                 isValid = false;
             }
@@ -1255,13 +1253,7 @@
         }
 
         async function updateTestTypeCards() {
-            const odUserId = state.userId.trim().toLowerCase();
-            
-            if (odUserId.length >= 3) {
-                showLoading('Verificando intentos...');
-                await fetchFromGoogleSheets();
-                hideLoading();
-            }
+            const odUserId = state.odUserId.trim().toLowerCase();
             
             document.querySelectorAll('.test-type-card').forEach(card => {
                 const testType = card.dataset.type;
@@ -1301,16 +1293,19 @@
         // ============================================
         
         let userIdTimeout;
-        elements.userId.addEventListener('input', (e) => {
-            state.userId = e.target.value;
+        elements.odUserId.addEventListener('input', (e) => {
+            state.odUserId = e.target.value;
             clearErrors();
             
             clearTimeout(userIdTimeout);
-            userIdTimeout = setTimeout(() => {
-                if (state.userId.trim().length >= 3) {
+            userIdTimeout = setTimeout(async () => {
+                if (state.odUserId.trim().length >= 2) {
+                    showLoading('Verificando usuario...');
+                    await fetchFromGoogleSheets();
+                    hideLoading();
                     updateTestTypeCards();
                 }
-            }, 500);
+            }, 800);
         });
 
         elements.firstName.addEventListener('input', (e) => {
@@ -1327,7 +1322,7 @@
             card.addEventListener('click', () => {
                 if (card.classList.contains('disabled')) {
                     const testType = card.dataset.type;
-                    const attemptData = getUserAttemptData(state.userId, testType);
+                    const attemptData = getUserAttemptData(state.odUserId, testType);
                     elements.maxAttemptsMessage.innerHTML = `
                         Ya has completado los <strong>${MAX_ATTEMPTS} intentos</strong> permitidos para la evaluación de <strong>${getTestTypeName(testType)}</strong>.<br><br>
                         Tu calificación final asignada es: <strong>${attemptData.bestScore}/15</strong> (${((attemptData.bestScore/15)*100).toFixed(1)}%)
@@ -1354,7 +1349,9 @@
             await fetchFromGoogleSheets();
             hideLoading();
             
-            const attemptData = getUserAttemptData(state.userId, state.testType);
+            const attemptData = getUserAttemptData(state.odUserId, state.testType);
+            console.log('Intentos del usuario:', attemptData);
+            
             if (attemptData.attempts >= MAX_ATTEMPTS) {
                 elements.maxAttemptsMessage.innerHTML = `
                     Ya has completado los <strong>${MAX_ATTEMPTS} intentos</strong> permitidos para esta evaluación.<br><br>
@@ -1374,7 +1371,7 @@
             state.bestScore = attemptData.bestScore;
             
             elements.testTitle.textContent = getTestTypeName(state.testType);
-            elements.testSubtitle.textContent = `${state.firstName} ${state.lastName} (${state.userId}) - Intento ${state.currentAttempt}/${MAX_ATTEMPTS}`;
+            elements.testSubtitle.textContent = `${state.firstName} ${state.lastName} (${state.odUserId}) - Intento ${state.currentAttempt}/${MAX_ATTEMPTS}`;
             
             showScreen('test');
             displayQuestion();
@@ -1463,16 +1460,14 @@
             const percentage = ((state.score / 15) * 100).toFixed(1);
             const newBestScore = Math.max(state.bestScore, state.score);
             
-            // Preparar respuestas para guardar
             const answersStr = state.questions.map((q, idx) => {
                 const userAns = state.userAnswers[idx];
                 const correct = userAns === q.correct ? '✓' : '✗';
                 return `P${idx+1}:${userAns !== null ? String.fromCharCode(65 + userAns) : '-'}${correct}`;
             }).join(', ');
             
-            // Enviar a Google Sheets
             const dataToSend = {
-                odUserId: state.userId,
+                odUserId: state.odUserId,
                 firstName: state.firstName,
                 lastName: state.lastName,
                 testType: state.testType,
@@ -1485,9 +1480,11 @@
             
             await sendToGoogleSheets(dataToSend);
             
-            // Actualizar datos locales
+            // Esperar un momento para que Google Sheets procese
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
             await fetchFromGoogleSheets();
-            const updatedData = getUserAttemptData(state.userId, state.testType);
+            const updatedData = getUserAttemptData(state.odUserId, state.testType);
             
             hideLoading();
             
@@ -1507,7 +1504,7 @@
                 ${remainingAttempts > 0 ? `<p>Intentos restantes: <span class="highlight">${remainingAttempts}</span></p>` : ''}
             `;
             
-            if (remainingAttempts === 0) {
+            if (remainingAttempts <= 0) {
                 elements.retryTest.style.display = 'none';
                 elements.finishEvaluation.style.display = 'none';
                 elements.finalResultBox.classList.remove('hidden');
@@ -1523,7 +1520,7 @@
             }
             
             elements.resultDetails.innerHTML = `
-                <strong>${state.firstName} ${state.lastName}</strong> (${state.userId})<br>
+                <strong>${state.firstName} ${state.lastName}</strong> (${state.odUserId})<br>
                 Porcentaje actual: ${percentage}%<br>
                 Puntaje mínimo requerido: 11/15 (73.3%)
             `;
@@ -1531,13 +1528,12 @@
             showScreen('results');
         }
 
-        // Reintentar evaluación
         elements.retryTest.addEventListener('click', async () => {
             showLoading('Verificando intentos...');
             await fetchFromGoogleSheets();
             hideLoading();
             
-            const attemptData = getUserAttemptData(state.userId, state.testType);
+            const attemptData = getUserAttemptData(state.odUserId, state.testType);
             if (attemptData.attempts >= MAX_ATTEMPTS) {
                 elements.maxAttemptsMessage.innerHTML = `
                     Ya has completado los <strong>${MAX_ATTEMPTS} intentos</strong> permitidos.<br><br>
@@ -1556,16 +1552,15 @@
             state.currentAttempt = attemptData.attempts + 1;
             state.bestScore = attemptData.bestScore;
             
-            elements.testSubtitle.textContent = `${state.firstName} ${state.lastName} (${state.userId}) - Intento ${state.currentAttempt}/${MAX_ATTEMPTS}`;
+            elements.testSubtitle.textContent = `${state.firstName} ${state.lastName} (${state.odUserId}) - Intento ${state.currentAttempt}/${MAX_ATTEMPTS}`;
             
             showScreen('test');
             displayQuestion();
             startTimer();
         });
 
-        // Finalizar evaluación voluntariamente
         elements.finishEvaluation.addEventListener('click', () => {
-            const attemptData = getUserAttemptData(state.userId, state.testType);
+            const attemptData = getUserAttemptData(state.odUserId, state.testType);
             elements.confirmFinishMessage.innerHTML = `
                 ¿Está seguro que desea finalizar la evaluación?<br><br>
                 Se le asignará su mejor calificación: <strong>${attemptData.bestScore}/15</strong><br>
@@ -1580,7 +1575,7 @@
 
         elements.confirmFinish.addEventListener('click', () => {
             elements.confirmFinishModal.classList.add('hidden');
-            const attemptData = getUserAttemptData(state.userId, state.testType);
+            const attemptData = getUserAttemptData(state.odUserId, state.testType);
             
             elements.retryTest.style.display = 'none';
             elements.finishEvaluation.style.display = 'none';
@@ -1679,12 +1674,12 @@
         elements.backToResults.addEventListener('click', () => showScreen('results'));
 
         elements.newTest.addEventListener('click', () => {
-            state.userId = '';
+            state.odUserId = '';
             state.firstName = '';
             state.lastName = '';
             state.testType = null;
             state.userAnswers = [];
-            elements.userId.value = '';
+            elements.odUserId.value = '';
             elements.firstName.value = '';
             elements.lastName.value = '';
             document.querySelectorAll('.test-type-card').forEach(c => {
@@ -1736,6 +1731,8 @@
             const success = await fetchFromGoogleSheets();
             hideLoading();
             
+            console.log('Datos cargados:', state.sheetsData);
+            
             if (success) {
                 elements.syncStatus.className = 'sync-status online';
                 elements.syncText.textContent = 'Conectado a Google Sheets';
@@ -1747,9 +1744,9 @@
             // Consolidar por usuario y tipo
             const consolidatedResults = {};
             state.sheetsData.forEach(row => {
-                const odUserId = (row.Usuario || '').toLowerCase().trim();
-                const testType = row.TipoPrueba || '';
-                const puntajeStr = row.Puntaje || '0/15';
+                const odUserId = String(row.Usuario || '').toLowerCase().trim();
+                const testType = normalizeTestType(String(row.TipoPrueba || ''));
+                const puntajeStr = String(row.Puntaje || '0/15');
                 const puntaje = parseInt(puntajeStr.split('/')[0]) || 0;
                 
                 if (odUserId && testType) {
@@ -1835,16 +1832,19 @@
         elements.refreshData.addEventListener('click', () => showAdminPanel());
 
         elements.exportExcel.addEventListener('click', () => {
-            if (state.sheetsData.length === 0) {
-                alert('No hay resultados para exportar');
+            console.log('Exportando datos:', state.sheetsData);
+            
+            if (!state.sheetsData || state.sheetsData.length === 0) {
+                alert('No hay resultados para exportar. Haga clic en "Actualizar Datos" primero.');
                 return;
             }
 
+            // Consolidar por usuario
             const consolidatedResults = {};
             state.sheetsData.forEach(row => {
-                const odUserId = (row.Usuario || '').toLowerCase().trim();
-                const testType = row.TipoPrueba || '';
-                const puntajeStr = row.Puntaje || '0/15';
+                const odUserId = String(row.Usuario || '').toLowerCase().trim();
+                const testType = normalizeTestType(String(row.TipoPrueba || ''));
+                const puntajeStr = String(row.Puntaje || '0/15');
                 const puntaje = parseInt(puntajeStr.split('/')[0]) || 0;
                 
                 if (odUserId && testType) {
@@ -1866,7 +1866,14 @@
                 }
             });
 
-            const data = Object.values(consolidatedResults).map((r, idx) => ({
+            const consolidatedArray = Object.values(consolidatedResults);
+            
+            if (consolidatedArray.length === 0) {
+                alert('No hay datos consolidados para exportar.');
+                return;
+            }
+
+            const data = consolidatedArray.map((r, idx) => ({
                 'No.': idx + 1,
                 'Usuario': r.odUserId,
                 'Nombres': r.firstName,
@@ -1887,11 +1894,11 @@
         });
 
         elements.exitAdmin.addEventListener('click', () => {
-            state.userId = '';
+            state.odUserId = '';
             state.firstName = '';
             state.lastName = '';
             state.testType = null;
-            elements.userId.value = '';
+            elements.odUserId.value = '';
             elements.firstName.value = '';
             elements.lastName.value = '';
             document.querySelectorAll('.test-type-card').forEach(c => {
