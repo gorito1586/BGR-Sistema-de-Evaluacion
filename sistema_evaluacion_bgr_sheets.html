@@ -1,0 +1,1909 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Evaluación BGR - Políticas de Crédito</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Montserrat:wght@400;600;700&display=swap');
+        
+        :root {
+            --primary: #1a365d;
+            --primary-dark: #0f2744;
+            --accent: #c9a227;
+            --accent-light: #e6c35c;
+            --success: #2e7d32;
+            --error: #c62828;
+            --bg-light: #f8f9fa;
+            --text-dark: #1a1a2e;
+            --shadow: 0 10px 40px rgba(26, 54, 93, 0.15);
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1a365d 0%, #2d4a7c 50%, #1a365d 100%);
+            min-height: 100vh;
+            color: var(--text-dark);
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .container.review-mode {
+            justify-content: flex-start;
+            padding-top: 40px;
+            padding-bottom: 40px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            animation: slideUp 0.5s ease;
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(201, 162, 39, 0.1) 0%, transparent 60%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .header h1 {
+            color: white;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.8em;
+            font-weight: 700;
+            margin-bottom: 5px;
+            position: relative;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .header .subtitle {
+            color: var(--accent-light);
+            font-size: 1em;
+            font-weight: 400;
+            position: relative;
+        }
+        
+        .logo-badge {
+            width: 80px; height: 80px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            box-shadow: 0 4px 15px rgba(201, 162, 39, 0.4);
+            position: relative;
+        }
+        
+        .logo-badge span {
+            color: var(--primary-dark);
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 1.4em;
+        }
+        
+        .content { padding: 40px; }
+        .form-group { margin-bottom: 25px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        
+        label {
+            display: block;
+            font-weight: 500;
+            color: var(--primary);
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+        
+        label .required {
+            color: var(--error);
+            margin-left: 3px;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 1em;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.3s ease;
+            background: var(--bg-light);
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(201, 162, 39, 0.15);
+            background: white;
+        }
+        
+        input.error {
+            border-color: var(--error);
+            background: #fff5f5;
+        }
+        
+        .error-message {
+            color: var(--error);
+            font-size: 0.85em;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        .error-message.show {
+            display: block;
+        }
+        
+        .btn {
+            padding: 16px 32px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            width: 100%;
+            box-shadow: 0 4px 15px rgba(26, 54, 93, 0.3);
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(26, 54, 93, 0.4);
+        }
+        
+        .btn-accent {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+            color: var(--primary-dark);
+            width: 100%;
+        }
+        
+        .btn-secondary { background: #e0e0e0; color: var(--text-dark); }
+        .btn-success { background: linear-gradient(135deg, var(--success) 0%, #388e3c 100%); color: white; }
+        .btn-danger { background: linear-gradient(135deg, var(--error) 0%, #d32f2f 100%); color: white; }
+        .btn-info { background: linear-gradient(135deg, #0288d1 0%, #01579b 100%); color: white; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        
+        .test-type-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .test-type-card {
+            padding: 25px 15px;
+            border: 3px solid #e0e0e0;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--bg-light);
+            position: relative;
+        }
+        
+        .test-type-card:hover:not(.disabled) {
+            border-color: var(--accent);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .test-type-card.selected {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, rgba(26, 54, 93, 0.05) 0%, rgba(26, 54, 93, 0.1) 100%);
+            box-shadow: 0 4px 15px rgba(26, 54, 93, 0.2);
+        }
+        
+        .test-type-card.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background: #f0f0f0;
+        }
+        
+        .test-type-card .icon { font-size: 2.5em; margin-bottom: 10px; }
+        .test-type-card h3 { color: var(--primary); font-size: 0.95em; font-weight: 600; }
+        
+        .test-type-card .attempts-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--primary);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+        
+        .test-type-card.disabled .attempts-badge {
+            background: var(--error);
+        }
+        
+        .test-type-card .best-score {
+            font-size: 0.8em;
+            color: var(--success);
+            margin-top: 8px;
+            font-weight: 500;
+        }
+        
+        .question-container {
+            background: var(--bg-light);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 25px;
+        }
+        
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .question-number {
+            background: var(--primary);
+            color: white;
+            padding: 8px 18px;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        
+        .timer {
+            background: var(--accent);
+            color: var(--primary-dark);
+            padding: 8px 18px;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        
+        .timer.warning { background: #ff9800; animation: blink 1s infinite; }
+        .timer.danger { background: var(--error); color: white; animation: blink 0.5s infinite; }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .question-text {
+            font-size: 1.1em;
+            line-height: 1.6;
+            color: var(--text-dark);
+            margin-bottom: 25px;
+            font-weight: 500;
+        }
+        
+        .options { display: flex; flex-direction: column; gap: 12px; }
+        
+        .option {
+            padding: 18px 22px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: white;
+        }
+        
+        .option:hover { border-color: var(--primary); background: rgba(26, 54, 93, 0.03); }
+        .option.selected { border-color: var(--primary); background: rgba(26, 54, 93, 0.08); }
+        .option.correct { border-color: var(--success); background: rgba(46, 125, 50, 0.15); }
+        .option.incorrect { border-color: var(--error); background: rgba(198, 40, 40, 0.15); }
+        
+        .option-letter {
+            width: 35px; height: 35px;
+            border-radius: 50%;
+            background: var(--bg-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+        
+        .option.selected .option-letter { background: var(--primary); color: white; }
+        .option.correct .option-letter { background: var(--success); color: white; }
+        .option.incorrect .option-letter { background: var(--error); color: white; }
+        
+        .progress-bar {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent) 0%, var(--accent-light) 100%);
+            transition: width 0.3s ease;
+        }
+        
+        .results-container { text-align: center; }
+        
+        .score-circle {
+            width: 180px; height: 180px;
+            border-radius: 50%;
+            margin: 0 auto 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .score-circle.passed {
+            background: linear-gradient(135deg, rgba(46, 125, 50, 0.1) 0%, rgba(46, 125, 50, 0.2) 100%);
+            border: 4px solid var(--success);
+        }
+        
+        .score-circle.failed {
+            background: linear-gradient(135deg, rgba(198, 40, 40, 0.1) 0%, rgba(198, 40, 40, 0.2) 100%);
+            border: 4px solid var(--error);
+        }
+        
+        .score-value { font-size: 3.5em; font-weight: 700; font-family: 'Montserrat', sans-serif; }
+        .score-circle.passed .score-value { color: var(--success); }
+        .score-circle.failed .score-value { color: var(--error); }
+        .score-label { font-size: 1em; color: #666; font-weight: 500; }
+        .result-message { font-size: 1.3em; font-weight: 600; margin-bottom: 15px; }
+        .result-details { color: #666; margin-bottom: 30px; line-height: 1.8; }
+        .result-buttons { display: flex; flex-direction: column; gap: 15px; max-width: 400px; margin: 0 auto; }
+        
+        .attempt-info {
+            background: var(--bg-light);
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .attempt-info .highlight {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .attempt-info .best-highlight {
+            color: var(--success);
+            font-weight: 700;
+            font-size: 1.1em;
+        }
+        
+        .admin-link {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 0.85em;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: color 0.3s;
+        }
+        
+        .admin-link:hover { color: var(--accent-light); }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+        
+        .results-table th, .results-table td {
+            padding: 14px 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .results-table th { background: var(--primary); color: white; font-weight: 600; }
+        .results-table tr:nth-child(even) { background: var(--bg-light); }
+        .results-table tr:hover { background: rgba(201, 162, 39, 0.1); }
+        
+        .badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+            display: inline-block;
+        }
+        
+        .badge-minorista { background: #e3f2fd; color: #1565c0; }
+        .badge-empresarial { background: #f3e5f5; color: #7b1fa2; }
+        .badge-recuperaciones { background: #fff3e0; color: #e65100; }
+        .badge-passed { background: #e8f5e9; color: #2e7d32; }
+        .badge-failed { background: #ffebee; color: #c62828; }
+        
+        .admin-actions { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
+        .admin-actions .btn { flex: 1; min-width: 150px; }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal {
+            background: white;
+            border-radius: 20px;
+            padding: 35px;
+            max-width: 450px;
+            width: 90%;
+            animation: modalIn 0.3s ease;
+        }
+        
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        .modal h3 { color: var(--primary); margin-bottom: 20px; font-family: 'Montserrat', sans-serif; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 25px; }
+        .modal-buttons .btn { flex: 1; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: var(--bg-light); padding: 20px; border-radius: 12px; text-align: center; }
+        .stat-value { font-size: 2em; font-weight: 700; color: var(--primary); font-family: 'Montserrat', sans-serif; }
+        .stat-label { color: #666; font-size: 0.85em; margin-top: 5px; }
+        .empty-state { text-align: center; padding: 50px; color: #999; }
+        .empty-state .icon { font-size: 4em; margin-bottom: 15px; }
+        .hidden { display: none !important; }
+        
+        .review-container { display: flex; flex-direction: column; gap: 25px; }
+        
+        .review-question {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        
+        .review-question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .review-question-number {
+            background: var(--primary);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85em;
+        }
+        
+        .review-status { padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 0.85em; }
+        .review-status.correct { background: #e8f5e9; color: var(--success); }
+        .review-status.incorrect { background: #ffebee; color: var(--error); }
+        .review-status.unanswered { background: #fff3e0; color: #e65100; }
+        
+        .review-question-text { font-size: 1.05em; line-height: 1.5; color: var(--text-dark); margin-bottom: 20px; font-weight: 500; }
+        .review-options { display: flex; flex-direction: column; gap: 10px; }
+        
+        .review-option {
+            padding: 14px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: white;
+        }
+        
+        .review-option.correct { border-color: var(--success); background: rgba(46, 125, 50, 0.1); }
+        .review-option.incorrect { border-color: var(--error); background: rgba(198, 40, 40, 0.1); }
+        
+        .review-option-letter {
+            width: 30px; height: 30px;
+            border-radius: 50%;
+            background: var(--bg-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9em;
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+        
+        .review-option.correct .review-option-letter { background: var(--success); color: white; }
+        .review-option.incorrect .review-option-letter { background: var(--error); color: white; }
+        .review-option-text { flex: 1; }
+        .review-option-indicator { font-size: 0.8em; font-weight: 600; padding: 4px 10px; border-radius: 12px; }
+        .review-option.correct .review-option-indicator { background: var(--success); color: white; }
+        .review-option.incorrect .review-option-indicator { background: var(--error); color: white; }
+        
+        .review-summary {
+            background: var(--bg-light);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .review-summary-item { text-align: center; }
+        .review-summary-value { font-size: 1.8em; font-weight: 700; font-family: 'Montserrat', sans-serif; }
+        .review-summary-value.correct { color: var(--success); }
+        .review-summary-value.incorrect { color: var(--error); }
+        .review-summary-value.total { color: var(--primary); }
+        .review-summary-label { font-size: 0.85em; color: #666; }
+        .back-to-results { position: sticky; bottom: 20px; margin-top: 20px; }
+        
+        .view-details-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.2s;
+        }
+        
+        .view-details-btn:hover { background: var(--primary-dark); }
+        
+        .final-result-box {
+            background: linear-gradient(135deg, rgba(46, 125, 50, 0.1) 0%, rgba(46, 125, 50, 0.2) 100%);
+            border: 2px solid var(--success);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .final-result-box h4 {
+            color: var(--success);
+            margin-bottom: 10px;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #e0e0e0;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            margin-top: 15px;
+            color: var(--primary);
+            font-weight: 500;
+        }
+        
+        .sync-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin-bottom: 15px;
+        }
+        
+        .sync-status.online {
+            background: #e8f5e9;
+            color: var(--success);
+        }
+        
+        .sync-status.offline {
+            background: #ffebee;
+            color: var(--error);
+        }
+        
+        .sync-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+        
+        @media (max-width: 768px) {
+            .test-type-selector { grid-template-columns: 1fr; }
+            .form-row, .form-row-3 { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .content { padding: 25px; }
+            .admin-actions { flex-direction: column; }
+            .results-table { font-size: 0.8em; }
+            .results-table th, .results-table td { padding: 10px 8px; }
+            .review-summary { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <p class="loading-text" id="loadingText">Cargando...</p>
+    </div>
+
+    <div id="homeScreen" class="container">
+        <div class="card">
+            <div class="header">
+                <div class="logo-badge"><span>BGR</span></div>
+                <h1>Sistema de Evaluación</h1>
+                <p class="subtitle">Políticas de Crédito 2025</p>
+            </div>
+            <div class="content">
+                <div class="form-row-3">
+                    <div class="form-group">
+                        <label>Usuario<span class="required">*</span></label>
+                        <input type="text" id="userId" placeholder="Ej: jperez">
+                        <p class="error-message" id="userIdError">El usuario es obligatorio</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Nombres<span class="required">*</span></label>
+                        <input type="text" id="firstName" placeholder="Ingrese sus nombres">
+                        <p class="error-message" id="firstNameError">Los nombres son obligatorios</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Apellidos<span class="required">*</span></label>
+                        <input type="text" id="lastName" placeholder="Ingrese sus apellidos">
+                        <p class="error-message" id="lastNameError">Los apellidos son obligatorios</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Seleccione el tipo de evaluación</label>
+                    <p id="testTypeError" class="error-message">Debe seleccionar un tipo de evaluación</p>
+                    <div class="test-type-selector" id="testTypeSelector">
+                        <div class="test-type-card" data-type="minorista">
+                            <div class="icon">🏦</div>
+                            <h3>Banca Minorista</h3>
+                        </div>
+                        <div class="test-type-card" data-type="empresarial">
+                            <div class="icon">🏢</div>
+                            <h3>Banca Empresarial</h3>
+                        </div>
+                        <div class="test-type-card" data-type="recuperaciones">
+                            <div class="icon">📊</div>
+                            <h3>Recuperaciones y Cobranzas</h3>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="startTest">Iniciar Evaluación</button>
+            </div>
+        </div>
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="#" class="admin-link" id="adminLink">🔐 Acceso Administrador</a>
+        </div>
+    </div>
+
+    <div id="testScreen" class="container hidden">
+        <div class="card">
+            <div class="header">
+                <div class="logo-badge"><span>BGR</span></div>
+                <h1 id="testTitle"></h1>
+                <p class="subtitle" id="testSubtitle"></p>
+            </div>
+            <div class="content">
+                <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+                <div class="question-container">
+                    <div class="question-header">
+                        <span class="question-number" id="questionNumber"></span>
+                        <span class="timer" id="timer">⏱️ 0:40</span>
+                    </div>
+                    <p class="question-text" id="questionText"></p>
+                    <div class="options" id="optionsContainer"></div>
+                </div>
+                <button class="btn btn-primary" id="nextQuestion" disabled>Siguiente Pregunta</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="resultsScreen" class="container hidden">
+        <div class="card">
+            <div class="header">
+                <div class="logo-badge"><span>BGR</span></div>
+                <h1>Resultados de la Evaluación</h1>
+                <p class="subtitle" id="resultsTestType"></p>
+            </div>
+            <div class="content">
+                <div class="results-container">
+                    <div class="score-circle" id="scoreCircle">
+                        <span class="score-value" id="scoreValue"></span>
+                        <span class="score-label">de 15 preguntas</span>
+                    </div>
+                    <p class="result-message" id="resultMessage"></p>
+                    <div class="attempt-info" id="attemptInfo"></div>
+                    <div id="finalResultBox" class="final-result-box hidden">
+                        <h4>📊 Calificación Final Asignada</h4>
+                        <p id="finalResultText"></p>
+                    </div>
+                    <p class="result-details" id="resultDetails"></p>
+                    <div class="result-buttons">
+                        <button class="btn btn-accent" id="reviewAnswers">📋 Revisar Respuestas</button>
+                        <button class="btn btn-primary" id="retryTest">🔄 Reintentar Evaluación</button>
+                        <button class="btn btn-success" id="finishEvaluation" style="display:none;">✅ Finalizar y Asignar Mejor Nota</button>
+                        <button class="btn btn-secondary" id="newTest">← Volver al Inicio</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="reviewScreen" class="container review-mode hidden">
+        <div class="card">
+            <div class="header">
+                <div class="logo-badge"><span>BGR</span></div>
+                <h1>Revisión de Respuestas</h1>
+                <p class="subtitle" id="reviewTestType"></p>
+            </div>
+            <div class="content">
+                <div class="review-summary" id="reviewSummary"></div>
+                <div class="review-container" id="reviewContainer"></div>
+                <div class="back-to-results">
+                    <button class="btn btn-primary" id="backToResults">← Volver a Resultados</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="adminScreen" class="container hidden">
+        <div class="card">
+            <div class="header">
+                <div class="logo-badge"><span>BGR</span></div>
+                <h1>Panel de Administración</h1>
+                <p class="subtitle">Gestión de Evaluaciones</p>
+            </div>
+            <div class="content">
+                <div style="text-align: center;">
+                    <div class="sync-status" id="syncStatus">
+                        <span class="sync-dot"></span>
+                        <span id="syncText">Conectado a Google Sheets</span>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="statTotal">0</div>
+                        <div class="stat-label">Total Evaluaciones</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statPassed">0</div>
+                        <div class="stat-label">Aprobados</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statAvg">0</div>
+                        <div class="stat-label">Promedio</div>
+                    </div>
+                </div>
+                <div class="admin-actions">
+                    <button class="btn btn-info" id="refreshData">🔄 Actualizar Datos</button>
+                    <button class="btn btn-success" id="exportExcel">📥 Descargar Excel</button>
+                    <button class="btn btn-secondary" id="exitAdmin">← Volver al Inicio</button>
+                </div>
+                <div id="resultsTableContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="adminModal" class="modal-overlay hidden">
+        <div class="modal">
+            <h3>🔐 Acceso Administrador</h3>
+            <div class="form-group">
+                <label>Contraseña</label>
+                <input type="password" id="adminPassword" placeholder="Ingrese la contraseña">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" id="cancelAdmin">Cancelar</button>
+                <button class="btn btn-primary" id="confirmAdmin">Ingresar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="maxAttemptsModal" class="modal-overlay hidden">
+        <div class="modal">
+            <h3>⚠️ Límite de Intentos Alcanzado</h3>
+            <p style="margin-bottom: 20px; color: #666;" id="maxAttemptsMessage"></p>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" id="closeMaxAttempts">Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmFinishModal" class="modal-overlay hidden">
+        <div class="modal">
+            <h3>✅ Confirmar Finalización</h3>
+            <p style="margin-bottom: 20px; color: #666;" id="confirmFinishMessage"></p>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" id="cancelFinish">Cancelar</button>
+                <button class="btn btn-success" id="confirmFinish">Finalizar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // CONFIGURACIÓN GOOGLE SHEETS
+        // ============================================
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwml1sfBVuqmwJXR5iGdlq5dmzydYGxqymtM5aneDTYtdAdOHzMZPbmN1EnJ9Ut_Ado/exec';
+        
+        // ============================================
+        // BASE DE DATOS DE PREGUNTAS
+        // ============================================
+        
+        const questionsBancaMinorista = [
+            { question: "Según el Manual de Políticas de Crédito, ¿cuál es el DIN máximo permitido para créditos de Nómina Militar ON-LINE?", options: ["40%", "50%", "60%", "45%"], correct: 1 },
+            { question: "¿Cuántas cuotas mínimas debe tener canceladas un cliente con crédito vigente para aplicar a un retanqueo?", options: ["3 cuotas", "6 cuotas", "12 cuotas", "4 cuotas"], correct: 1 },
+            { question: "¿Cuál es la edad máxima permitida para ser sujeto de crédito en Nómina Militar ON-LINE?", options: ["60 años", "65 años", "64 años 11 meses 29 días", "70 años"], correct: 2 },
+            { question: "¿Cuál es el ingreso mínimo requerido para militares en servicio activo y pasivo (Nómina Militar)?", options: ["50 dólares", "80 dólares", "100 dólares", "120 dólares"], correct: 1 },
+            { question: "¿Cuántas acreditaciones mínimas debe tener un cliente en su cuenta BGR para acceder a Nómina Militar ON-LINE?", options: ["1 acreditación", "2 acreditaciones", "3 acreditaciones", "6 acreditaciones"], correct: 2 },
+            { question: "¿Qué tipo de cuentas NO aplican para validar acreditaciones de Nómina Militar ON-LINE?", options: ["Cuentas corrientes", "Cuentas de ahorros", "Cuentas virtuales", "Cuentas empresariales"], correct: 2 },
+            { question: "¿Cuántos créditos BGR Nómina Militar puede mantener vigentes un cliente?", options: ["1 crédito", "2 créditos", "3 créditos", "Sin límite"], correct: 0 },
+            { question: "¿Cuál es la calificación de Score Militar que permite aprobar en campañas automáticas?", options: ["Solo A+", "A+ y A", "A+, A y A-", "Todas las calificaciones"], correct: 2 },
+            { question: "¿Cuál es el plazo máximo para créditos de $300 a $1,500 en BGR Automático ON-LINE?", options: ["12 meses", "24 meses", "36 meses", "48 meses"], correct: 1 },
+            { question: "¿Qué tipo de garantía se requiere para créditos BGR Automático ON-LINE?", options: ["Hipotecaria", "Prendaria", "Quirografaria", "Cash colateral"], correct: 2 },
+            { question: "¿Qué ocurre con clientes NRB (No Registrado en Base) respecto al Score Militar?", options: ["Se aprueba automáticamente", "Se niega automáticamente", "No se valida score, se analiza con política de registros negativos", "Se requiere garante"], correct: 2 },
+            { question: "¿Cuál es la edad mínima para ser sujeto de crédito en Nómina Militar?", options: ["18 años", "20 años", "21 años", "25 años"], correct: 1 },
+            { question: "¿Cuántas referencias se requieren para créditos de Nómina Militar?", options: ["1 familiar", "1 personal", "1 familiar y 1 personal", "2 familiares"], correct: 2 },
+            { question: "¿Cuál es el monto máximo para créditos BGR Automático ON-LINE?", options: ["$30,000", "$40,000", "$50,000", "$60,000"], correct: 2 },
+            { question: "¿Qué seguro es obligatorio para todas las operaciones de crédito de personas naturales?", options: ["Seguro de vida", "Seguro de desgravamen", "Seguro contra accidentes", "Seguro de desempleo"], correct: 1 },
+            { question: "¿Cuál es el valor mínimo comercial del bien para financiar vivienda nueva o usada (Militares)?", options: ["$20,000", "$25,000", "$30,000", "$15,000"], correct: 1 },
+            { question: "¿Cuál es el porcentaje máximo de financiamiento para vivienda de militares?", options: ["80% del valor comercial", "85% del valor comercial", "90% del valor comercial", "95% del valor comercial"], correct: 2 },
+            { question: "¿Cuál es el valor máximo a financiar para crédito hipotecario militar?", options: ["$150,000", "$200,000", "$250,000", "$300,000"], correct: 2 },
+            { question: "¿Cuál es el plazo máximo para créditos de vivienda militar?", options: ["15 años", "20 años", "25 años", "30 años"], correct: 1 },
+            { question: "¿Cuál es el CIN máximo permitido para crédito hipotecario militar?", options: ["30%", "35%", "40%", "45%"], correct: 1 },
+            { question: "¿Cuál es el CIN máximo para clientes A+ sin deudas en el sistema financiero (hipotecario militar)?", options: ["35%", "40%", "45%", "50%"], correct: 1 },
+            { question: "¿Cuál es el DIN máximo permitido para crédito hipotecario militar?", options: ["60%", "65%", "69.34%", "75%"], correct: 2 },
+            { question: "¿Cuál es la edad máxima para crédito hipotecario militar?", options: ["60 años", "64 años 4 meses", "65 años", "70 años"], correct: 1 },
+            { question: "¿Cuál es el plazo máximo para financiamiento de terreno (militares)?", options: ["5 años", "10 años", "15 años", "20 años"], correct: 1 },
+            { question: "¿Cuál es el valor mínimo comercial para financiar terreno (militares)?", options: ["$10,000", "$12,000", "$15,000", "$20,000"], correct: 1 },
+            { question: "Para ampliación/remodelación, ¿qué porcentaje máximo del valor comercial del inmueble se puede financiar?", options: ["30%", "40%", "50%", "60%"], correct: 1 },
+            { question: "¿Qué calificación de Score Militar resulta en NEGACIÓN para crédito hipotecario?", options: ["A-", "B", "NRB", "A"], correct: 1 },
+            { question: "¿Cuál es la vigencia de la aprobación de un crédito hipotecario militar?", options: ["3 meses", "6 meses", "9 meses", "12 meses"], correct: 1 },
+            { question: "¿Cuál es la cobertura mínima de la garantía para créditos hipotecarios?", options: ["90%", "100%", "110%", "120%"], correct: 1 },
+            { question: "¿Qué porcentaje de financiamiento aplica para terrenos CON convenio inmobiliaria?", options: ["70%", "80%", "85%", "90%"], correct: 1 },
+            { question: "¿Cuál es la edad mínima para acceder a crédito VIP/VIS para civiles?", options: ["20 años", "22 años", "24 años", "25 años"], correct: 2 },
+            { question: "¿Cuál es la edad máxima para crédito VIP/VIS civil?", options: ["65 años", "70 años", "74 años 11 meses 29 días", "75 años"], correct: 2 },
+            { question: "¿Cuál es el ingreso mínimo para civiles dependientes en VIP/VIS?", options: ["$500", "$600", "$800", "$1,000"], correct: 2 },
+            { question: "¿Cuál es el CIN máximo para clientes civiles DEPENDIENTES en VIP/VIS?", options: ["30%", "35%", "40%", "45%"], correct: 1 },
+            { question: "¿Cuál es el CIN máximo para clientes civiles INDEPENDIENTES en VIP/VIS?", options: ["25%", "30%", "35%", "40%"], correct: 1 },
+            { question: "¿Cuál es el ingreso máximo mensual permitido para VIP-VIS (en SBU)?", options: ["4.50 SBU", "5.00 SBU", "6.34 SBU", "7.00 SBU"], correct: 2 },
+            { question: "¿Cuál es el ingreso máximo mensual para VIS Segmento 2 con BONO MIDUVI (en SBU)?", options: ["2.5 SBU", "3.0 SBU", "3.5 SBU", "4.0 SBU"], correct: 2 },
+            { question: "¿Cuál es el valor máximo por metro cuadrado para VIP/VIS (en SBU)?", options: ["2.00 SBU", "2.25 SBU", "2.49 SBU", "2.75 SBU"], correct: 2 },
+            { question: "¿Cuál es el plazo máximo para créditos VIP/VIS civil?", options: ["20 años", "25 años", "30 años", "35 años"], correct: 1 },
+            { question: "¿Cuál es la cuota fija de entrada máxima para VIP/VIS?", options: ["3%", "5%", "10%", "15%"], correct: 1 },
+            { question: "¿Qué antigüedad mínima debe tener la disolución conyugal para aplicar a VIP/VIS?", options: ["2 años", "3 años", "5 años", "No aplica"], correct: 2 },
+            { question: "¿Se pueden otorgar excepciones en el producto VIP/VIS CTH?", options: ["Sí, con aprobación del comité", "Sí, solo para garantías", "No aplica excepciones", "Solo para montos menores"], correct: 2 },
+            { question: "¿Qué tipo de garantía se requiere para VIP/VIS?", options: ["Segunda hipoteca", "Primera hipoteca sin hipoteca previa", "Garantía quirografaria", "Prenda comercial"], correct: 1 },
+            { question: "¿Se pueden desembolsar créditos VIP/VIS con garantía en trámite?", options: ["Sí, hasta 60 días", "Sí, hasta 30 días", "No, bajo ningún concepto", "Solo con aprobación especial"], correct: 2 },
+            { question: "¿Qué clientes con ventas mayores deben ser analizados por Banca Empresarial?", options: ["Mayores a $100,000", "Mayores a $150,000", "Mayores a $200,000", "Mayores a $300,000"], correct: 2 }
+        ];
+
+        const questionsBancaEmpresarial = [
+            { question: "¿Cuáles son las ventas anuales mínimas para que un cliente sea atendido por el segmento PYME?", options: ["USD 500,000", "USD 800,000", "USD 1,000,000", "USD 1,500,000"], correct: 1 },
+            { question: "¿Cuál es el rango de ventas anuales para el segmento Empresarial?", options: ["USD 800,000 a USD 1,500,000", "USD 1,500,000 a USD 7,000,000", "USD 7,000,000 en adelante", "USD 300,000 a USD 800,000"], correct: 1 },
+            { question: "¿Cuál es el rango de ventas anuales para el segmento Corporativo?", options: ["Mayor a USD 5,000,000", "Mayor a USD 7,000,000", "Mayor a USD 10,000,000", "Mayor a USD 3,000,000"], correct: 1 },
+            { question: "¿Cuál es el plazo máximo de cumplimiento para la excepción de 'Garantía en Trámite'?", options: ["30 días", "45 días", "60 días", "90 días"], correct: 2 },
+            { question: "¿Cuál es el plazo de validez de las aprobaciones puntuales de crédito para Banca Empresarial?", options: ["3 meses", "6 meses", "12 meses", "30 días"], correct: 1 },
+            { question: "¿Cuál es la tolerancia permitida para operaciones de capital de trabajo?", options: ["5%", "10%", "15%", "20%"], correct: 1 },
+            { question: "¿Cuál es el plazo de cumplimiento para actualización de balances generales/auditados?", options: ["60 días", "90 días", "120 días", "180 días"], correct: 2 },
+            { question: "¿Cuál es la cobertura mínima requerida para una operación BTB (Back to Back)?", options: ["100%", "110%", "125%", "150%"], correct: 2 },
+            { question: "¿Hasta qué validez tiene una línea de crédito después de su fecha de vencimiento?", options: ["15 días", "30 días", "45 días", "60 días"], correct: 1 },
+            { question: "¿Cuál es el plazo de cumplimiento para la excepción de 'Caducidad de Póliza de Seguro'?", options: ["15 días", "30 días", "45 días", "60 días"], correct: 1 },
+            { question: "¿Cuál es el plazo de cumplimiento para actualización de balances internos?", options: ["8 días", "15 días", "30 días", "45 días"], correct: 1 },
+            { question: "¿Con qué frecuencia deben actualizarse los balances internos?", options: ["Mensualmente", "Trimestralmente", "Semestralmente", "Anualmente"], correct: 1 },
+            { question: "¿Para qué monto de activos es exigible la presentación de balances auditados?", options: ["Mayor a USD 300,000", "Mayor a USD 500,000", "Mayor a USD 1,000,000", "Mayor a USD 2,000,000"], correct: 2 },
+            { question: "¿Qué ocurre con oficiales que tienen excepciones vencidas más de 90 días?", options: ["Reciben amonestación", "Quedan suspendidos los cupos de sobregiros", "No pueden presentar operaciones a comité", "B y C son correctas"], correct: 3 },
+            { question: "¿Cuál es el plazo de cumplimiento para 'Actualización Estado de Situación Personal'?", options: ["8 días", "15 días", "30 días", "45 días"], correct: 0 },
+            { question: "¿Cuál es el plazo para regularizar la excepción de 'Garantía en Trámite Prenda Comercial'?", options: ["8 días laborables", "11 días laborables", "15 días laborables", "30 días laborables"], correct: 1 },
+            { question: "¿Qué monto de operaciones requiere aprobación de la Gerencia de Crédito y Recuperaciones para excepciones?", options: ["Mayor a USD 200,000", "Mayor a USD 300,000", "Mayor a USD 400,000", "Mayor a USD 500,000"], correct: 2 },
+            { question: "¿Qué tiempo tienen los asesores y subgerencias con excepciones vencidas para recibir amonestación escrita?", options: ["30 días", "60 días", "90 días", "120 días"], correct: 1 },
+            { question: "¿Se pueden otorgar excepciones para operaciones de clientes nuevos?", options: ["Sí, con aprobación del comité", "Sí, solo para garantías", "No, no existen excepciones para clientes nuevos", "Solo para operaciones menores a USD 50,000"], correct: 2 },
+            { question: "¿Cuál es el plazo de cumplimiento para 'Acta de Calificación de Cartera'?", options: ["15 días", "30 días", "45 días", "60 días"], correct: 1 },
+            { question: "¿Quién aprueba excepciones para operaciones hasta USD 600,000?", options: ["Subgerente de Negocios", "Gerente Regional de Negocios", "Gerente Nacional de Negocios y Mercadeo", "Gerente General"], correct: 1 },
+            { question: "¿Cuál es el plazo máximo para la excepción de 'Fecha Valor' en desembolsos?", options: ["5 días", "8 días", "15 días", "30 días"], correct: 1 },
+            { question: "¿Cuál es el monto mínimo solicitado para acceder a créditos del segmento productivo?", options: ["USD 20,000", "USD 30,000", "USD 40,000", "USD 50,000"], correct: 2 },
+            { question: "¿Para quién aplica la observación de 'Estado de Situación Personal'?", options: ["Personas jurídicas", "Solo personas naturales", "Ambos", "Solo empresas"], correct: 1 },
+            { question: "¿Qué documento NO es excepcionable según la matriz?", options: ["Avalúo desactualizado", "Póliza de seguro caducada", "Reporte de visita a clientes", "Certificado del IESS"], correct: 2 },
+            { question: "¿Cuál es el plazo de cumplimiento para 'Caducidad de Inscripción/Nombramientos'?", options: ["8 días", "15 días", "30 días", "45 días"], correct: 0 },
+            { question: "¿Quién es el reemplazo de la Gerencia de Crédito y Recuperaciones en su ausencia para aprobar excepciones?", options: ["Gerente General", "Subgerencia de Adm. de Crédito + Subgerencia de Recuperaciones", "Gerente Regional", "Comité de Crédito"], correct: 1 },
+            { question: "¿Cuál es el plazo para la excepción de ausencia de Certificado del IESS?", options: ["15 días", "30 días", "45 días", "60 días"], correct: 1 },
+            { question: "¿Cuál es el plazo para la excepción de falta de actualización de avalúo?", options: ["15 días", "30 días", "45 días", "60 días"], correct: 1 },
+            { question: "¿Cuál es el plazo para la excepción de Caducidad de Certificado de Superintendencia de Compañías?", options: ["15 días", "30 días", "45 días", "60 días"], correct: 1 }
+        ];
+
+        const questionsRecuperaciones = [
+            { question: "¿Cuál es el saldo máximo de capital para que el Comité de Refinanciamiento y Reestructuración pueda resolver operaciones?", options: ["USD 1,000,000", "USD 1,400,000", "USD 2,000,000", "USD 500,000"], correct: 1 },
+            { question: "¿Cuántas cuotas debe pagar un deudor de crédito reestructurado para pasar a una categoría de menor riesgo?", options: ["2 cuotas", "3 cuotas", "4 cuotas", "6 cuotas"], correct: 1 },
+            { question: "¿Qué categoría de riesgo máxima debe tener un cliente para acceder a refinanciamiento?", options: ["A1", "B1", "B2", "C1"], correct: 2 },
+            { question: "¿Cuántas reestructuraciones se pueden conceder para un mismo préstamo?", options: ["Solo 1, sin excepciones", "Máximo 2", "Solo 1, salvo aprobación excepcional del Directorio", "Sin límite"], correct: 2 },
+            { question: "¿Qué porcentaje del patrimonio técnico requiere aprobación del Directorio para reestructuraciones?", options: ["Mayor al 1%", "Mayor al 2%", "Mayor al 5%", "Mayor al 10%"], correct: 1 },
+            { question: "¿Cuántos días de vencimiento debe tener un sobregiro para pasar al área de Recuperaciones?", options: ["30 días", "60 días", "90 días", "120 días"], correct: 2 },
+            { question: "¿Quién aprueba las excepciones en el área de Recuperaciones y Cobranzas?", options: ["Gerente de Crédito", "Subgerencia de R&C o su delegado", "Gerente Regional", "Comité de Crédito"], correct: 1 },
+            { question: "¿Qué tipo de calificación debe tener un cliente para baja de valores?", options: ["C o D", "D o E", "Solo E", "B, C o D"], correct: 1 },
+            { question: "¿Cuántas veces se puede aplicar el monto máximo de baja de valores sobre un cliente?", options: ["Ilimitado", "Dos veces", "Una sola vez", "Tres veces"], correct: 2 },
+            { question: "¿Qué sucede con un cliente después de ejecutarse una baja de valores?", options: ["Puede solicitar nuevo crédito", "Se registra en listas negras y no puede continuar como cliente", "Solo pierde beneficios", "Debe esperar 2 años"], correct: 1 },
+            { question: "¿Con qué frecuencia debe informar el Comité de Refinanciamiento y Reestructuración al Directorio?", options: ["Mensualmente", "Trimestralmente", "Semestralmente", "Anualmente"], correct: 1 },
+            { question: "¿Qué ocurre con las líneas de crédito de operaciones reestructuradas?", options: ["Se mantienen vigentes", "Se reducen al 50%", "Quedan insubsistentes", "Se congelan temporalmente"], correct: 2 },
+            { question: "¿Qué debe demostrar la proyección de ingresos para aumentar endeudamiento en operaciones reestructuradas?", options: ["Solo estabilidad", "Capacidad de pago básica", "Producir utilidades o ingresos netos", "Crecimiento del 10%"], correct: 2 },
+            { question: "Si un nuevo deudor sustituye al original en una reestructuración y es de un tercero fuera del grupo económico, ¿qué se requiere?", options: ["Solo firma del nuevo deudor", "Estudio que acredite capacidad financiera", "Garantía adicional", "Aprobación del Directorio"], correct: 1 },
+            { question: "¿Qué calificación mantiene un crédito reestructurado inicialmente?", options: ["Se mejora automáticamente", "Mantiene la categoría que tenía al momento de implementar la operación", "Pasa a categoría A", "Se deteriora un nivel"], correct: 1 },
+            { question: "¿Cuántos meses sin falta de pago se requieren para mejorar calificación de operación reestructurada (alternativa a 3 cuotas)?", options: ["3 meses", "6 meses", "9 meses", "12 meses"], correct: 1 },
+            { question: "¿Qué sucede si la reestructuración implica sustitución del deudor por otro del mismo grupo económico?", options: ["Se mejora la calificación", "Se mantiene la calificación del deudor original", "Requiere nueva evaluación", "Se cancela el crédito"], correct: 1 },
+            { question: "¿Qué deben hacer las entidades financieras con préstamos irrecuperables?", options: ["Mantenerlos en libros indefinidamente", "Castigarlos contablemente pero continuar con el cobro", "Condonarlos automáticamente", "Transferirlos a otra entidad"], correct: 1 },
+            { question: "¿Qué debe consolidarse en un refinanciamiento de créditos?", options: ["Solo el crédito principal", "Todas las deudas del mismo segmento", "Solo deudas vencidas", "Deudas de cualquier segmento"], correct: 1 },
+            { question: "¿Cuál es una excepción válida para no consolidar deudas en refinanciamiento?", options: ["Cuando el cliente lo solicite", "Cuando los flujos de pago sean independientes y no se advierta deterioro", "Cuando el monto sea menor a USD 50,000", "Nunca hay excepciones"], correct: 1 },
+            { question: "¿Qué nivel aprueba refinanciamientos?", options: ["El mismo nivel que aprobó el original", "El nivel superior que autorizó el crédito original", "Solo el Directorio", "El Gerente de Crédito"], correct: 1 },
+            { question: "¿Cómo debe solicitarse formalmente una reestructuración?", options: ["Verbalmente al oficial", "Por escrito por el deudor a la IFI", "A través de un abogado", "Por correo electrónico"], correct: 1 },
+            { question: "¿Qué debe presentar el deudor para acceder a refinanciamiento según el análisis financiero?", options: ["Solo historial crediticio limpio", "Flujo de caja favorable y utilidades o ingreso neto", "Garantías adicionales", "Solo carta de intención"], correct: 1 },
+            { question: "¿A qué se refiere la 'medida excepcional' del refinanciamiento según la normativa?", options: ["Solo para clientes VIP", "No puede convertirse en práctica habitual de recuperación", "Solo para montos grandes", "Solo para primeros refinanciamientos"], correct: 1 },
+            { question: "¿Qué ocurre con la provisión cuando la calificación del nuevo deudor es de menor riesgo que el anterior?", options: ["Se mantiene igual", "Pueden reversarse las provisiones en el porcentaje que corresponda", "Se incrementan", "Se eliminan totalmente"], correct: 1 },
+            { question: "¿Qué clientes con operaciones castigadas pueden solicitar nuevo crédito según la política para militares?", options: ["Ninguno", "Aquellos con antigüedad mayor a 12 meses y cancelados, previa aprobación de la Jefatura de UAC", "Todos después de 6 meses", "Solo oficiales"], correct: 1 },
+            { question: "¿Qué categoría de riesgo puede tener un cliente para ser sujeto de reestructuración?", options: ["Solo A o B", "Superior al potencial (C, D o E)", "Solo D o E", "Cualquier categoría"], correct: 1 },
+            { question: "¿Quién debe informarse cuando las reestructuraciones superan el 2% del patrimonio técnico?", options: ["Solo al Directorio", "Al Directorio y a la Superintendencia de Bancos", "Solo a la Superintendencia", "Al Comité de Crédito"], correct: 1 },
+            { question: "¿Para qué tipo de operaciones aplica la excepción 'Fecha Valor Cancelación'?", options: ["Solo banca empresarial", "Solo banca minorista", "Operaciones de R&C con aprobación de la Subgerencia del área", "Todas las operaciones"], correct: 2 },
+            { question: "¿Quiénes conforman el Comité de Refinanciamiento y Reestructuración?", options: ["Solo Gerencia de Crédito", "Gerencia General, Gerencia de Riesgos, Gerencia de Negocios, Gerencia de Crédito y Subgerencias", "Directorio completo", "Solo Gerencia General"], correct: 1 }
+        ];
+
+        // ============================================
+        // CONSTANTES
+        // ============================================
+        const MAX_ATTEMPTS = 3;
+        const TIME_PER_QUESTION = 40;
+
+        // ============================================
+        // ESTADO DE LA APLICACIÓN
+        // ============================================
+        
+        let state = {
+            userId: '',
+            firstName: '',
+            lastName: '',
+            testType: null,
+            questions: [],
+            currentQuestion: 0,
+            selectedAnswer: null,
+            userAnswers: [],
+            score: 0,
+            timeLeft: TIME_PER_QUESTION,
+            timerInterval: null,
+            currentAttempt: 0,
+            bestScore: 0,
+            sheetsData: [],
+            userAttempts: {}
+        };
+
+        // ============================================
+        // ELEMENTOS DEL DOM
+        // ============================================
+        
+        const screens = {
+            home: document.getElementById('homeScreen'),
+            test: document.getElementById('testScreen'),
+            results: document.getElementById('resultsScreen'),
+            review: document.getElementById('reviewScreen'),
+            admin: document.getElementById('adminScreen')
+        };
+
+        const elements = {
+            loadingOverlay: document.getElementById('loadingOverlay'),
+            loadingText: document.getElementById('loadingText'),
+            userId: document.getElementById('userId'),
+            userIdError: document.getElementById('userIdError'),
+            firstName: document.getElementById('firstName'),
+            firstNameError: document.getElementById('firstNameError'),
+            lastName: document.getElementById('lastName'),
+            lastNameError: document.getElementById('lastNameError'),
+            testTypeError: document.getElementById('testTypeError'),
+            startTest: document.getElementById('startTest'),
+            testTypeSelector: document.getElementById('testTypeSelector'),
+            testTypeCards: document.querySelectorAll('.test-type-card'),
+            adminLink: document.getElementById('adminLink'),
+            adminModal: document.getElementById('adminModal'),
+            adminPassword: document.getElementById('adminPassword'),
+            cancelAdmin: document.getElementById('cancelAdmin'),
+            confirmAdmin: document.getElementById('confirmAdmin'),
+            testTitle: document.getElementById('testTitle'),
+            testSubtitle: document.getElementById('testSubtitle'),
+            progressFill: document.getElementById('progressFill'),
+            questionNumber: document.getElementById('questionNumber'),
+            timer: document.getElementById('timer'),
+            questionText: document.getElementById('questionText'),
+            optionsContainer: document.getElementById('optionsContainer'),
+            nextQuestion: document.getElementById('nextQuestion'),
+            resultsTestType: document.getElementById('resultsTestType'),
+            scoreCircle: document.getElementById('scoreCircle'),
+            scoreValue: document.getElementById('scoreValue'),
+            resultMessage: document.getElementById('resultMessage'),
+            attemptInfo: document.getElementById('attemptInfo'),
+            finalResultBox: document.getElementById('finalResultBox'),
+            finalResultText: document.getElementById('finalResultText'),
+            resultDetails: document.getElementById('resultDetails'),
+            reviewAnswers: document.getElementById('reviewAnswers'),
+            retryTest: document.getElementById('retryTest'),
+            finishEvaluation: document.getElementById('finishEvaluation'),
+            newTest: document.getElementById('newTest'),
+            reviewTestType: document.getElementById('reviewTestType'),
+            reviewSummary: document.getElementById('reviewSummary'),
+            reviewContainer: document.getElementById('reviewContainer'),
+            backToResults: document.getElementById('backToResults'),
+            syncStatus: document.getElementById('syncStatus'),
+            syncText: document.getElementById('syncText'),
+            statTotal: document.getElementById('statTotal'),
+            statPassed: document.getElementById('statPassed'),
+            statAvg: document.getElementById('statAvg'),
+            resultsTableContainer: document.getElementById('resultsTableContainer'),
+            refreshData: document.getElementById('refreshData'),
+            exportExcel: document.getElementById('exportExcel'),
+            exitAdmin: document.getElementById('exitAdmin'),
+            maxAttemptsModal: document.getElementById('maxAttemptsModal'),
+            maxAttemptsMessage: document.getElementById('maxAttemptsMessage'),
+            closeMaxAttempts: document.getElementById('closeMaxAttempts'),
+            confirmFinishModal: document.getElementById('confirmFinishModal'),
+            confirmFinishMessage: document.getElementById('confirmFinishMessage'),
+            cancelFinish: document.getElementById('cancelFinish'),
+            confirmFinish: document.getElementById('confirmFinish')
+        };
+
+        // ============================================
+        // FUNCIONES DE GOOGLE SHEETS
+        // ============================================
+        
+        function showLoading(text = 'Cargando...') {
+            elements.loadingText.textContent = text;
+            elements.loadingOverlay.classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            elements.loadingOverlay.classList.add('hidden');
+        }
+
+        async function sendToGoogleSheets(data) {
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                return { success: true };
+            } catch (error) {
+                console.error('Error enviando a Google Sheets:', error);
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function fetchFromGoogleSheets() {
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL);
+                const result = await response.json();
+                if (result.success) {
+                    state.sheetsData = result.data || [];
+                    processUserAttempts();
+                    return true;
+                }
+                return false;
+            } catch (error) {
+                console.error('Error obteniendo datos de Google Sheets:', error);
+                return false;
+            }
+        }
+
+        function processUserAttempts() {
+            state.userAttempts = {};
+            state.sheetsData.forEach(row => {
+                const odUserId = (row.Usuario || '').toLowerCase().trim();
+                const testType = row.TipoPrueba || '';
+                const puntajeStr = row.Puntaje || '0/15';
+                const puntaje = parseInt(puntajeStr.split('/')[0]) || 0;
+                
+                if (odUserId && testType) {
+                    const key = `${odUserId}_${testType}`;
+                    if (!state.userAttempts[key]) {
+                        state.userAttempts[key] = { attempts: 0, bestScore: 0 };
+                    }
+                    state.userAttempts[key].attempts++;
+                    state.userAttempts[key].bestScore = Math.max(state.userAttempts[key].bestScore, puntaje);
+                }
+            });
+        }
+
+        function getUserAttemptData(odUserId, testType) {
+            const key = `${odUserId.toLowerCase().trim()}_${testType}`;
+            return state.userAttempts[key] || { attempts: 0, bestScore: 0 };
+        }
+
+        // ============================================
+        // FUNCIONES DE UTILIDAD
+        // ============================================
+        
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        function getQuestionsByType(type) {
+            let pool;
+            switch(type) {
+                case 'minorista': pool = questionsBancaMinorista; break;
+                case 'empresarial': pool = questionsBancaEmpresarial; break;
+                case 'recuperaciones': pool = questionsRecuperaciones; break;
+                default: pool = [];
+            }
+            return shuffleArray(pool).slice(0, 15);
+        }
+
+        function getTestTypeName(type) {
+            switch(type) {
+                case 'minorista': return 'Banca Minorista';
+                case 'empresarial': return 'Banca Empresarial';
+                case 'recuperaciones': return 'Recuperaciones y Cobranzas';
+                default: return type;
+            }
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function showScreen(screenName) {
+            Object.values(screens).forEach(s => s.classList.add('hidden'));
+            screens[screenName].classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        function clearErrors() {
+            elements.userId.classList.remove('error');
+            elements.firstName.classList.remove('error');
+            elements.lastName.classList.remove('error');
+            elements.userIdError.classList.remove('show');
+            elements.firstNameError.classList.remove('show');
+            elements.lastNameError.classList.remove('show');
+            elements.testTypeError.classList.remove('show');
+        }
+
+        function validateForm() {
+            clearErrors();
+            let isValid = true;
+
+            if (!state.userId.trim()) {
+                elements.userId.classList.add('error');
+                elements.userIdError.classList.add('show');
+                isValid = false;
+            }
+
+            if (!state.firstName.trim()) {
+                elements.firstName.classList.add('error');
+                elements.firstNameError.classList.add('show');
+                isValid = false;
+            }
+
+            if (!state.lastName.trim()) {
+                elements.lastName.classList.add('error');
+                elements.lastNameError.classList.add('show');
+                isValid = false;
+            }
+
+            if (!state.testType) {
+                elements.testTypeError.classList.add('show');
+                isValid = false;
+            }
+
+            return isValid;
+        }
+
+        async function updateTestTypeCards() {
+            const odUserId = state.userId.trim().toLowerCase();
+            
+            if (odUserId.length >= 3) {
+                showLoading('Verificando intentos...');
+                await fetchFromGoogleSheets();
+                hideLoading();
+            }
+            
+            document.querySelectorAll('.test-type-card').forEach(card => {
+                const testType = card.dataset.type;
+                const attemptData = getUserAttemptData(odUserId, testType);
+                
+                const existingBadge = card.querySelector('.attempts-badge');
+                if (existingBadge) existingBadge.remove();
+                const existingScore = card.querySelector('.best-score');
+                if (existingScore) existingScore.remove();
+                
+                if (odUserId && attemptData.attempts > 0) {
+                    const badge = document.createElement('span');
+                    badge.className = 'attempts-badge';
+                    badge.textContent = `${attemptData.attempts}/${MAX_ATTEMPTS}`;
+                    card.appendChild(badge);
+                    
+                    if (attemptData.bestScore > 0) {
+                        const scoreDiv = document.createElement('div');
+                        scoreDiv.className = 'best-score';
+                        scoreDiv.textContent = `Mejor nota: ${attemptData.bestScore}/15`;
+                        card.appendChild(scoreDiv);
+                    }
+                    
+                    if (attemptData.attempts >= MAX_ATTEMPTS) {
+                        card.classList.add('disabled');
+                    } else {
+                        card.classList.remove('disabled');
+                    }
+                } else {
+                    card.classList.remove('disabled');
+                }
+            });
+        }
+
+        // ============================================
+        // EVENT LISTENERS - HOME
+        // ============================================
+        
+        let userIdTimeout;
+        elements.userId.addEventListener('input', (e) => {
+            state.userId = e.target.value;
+            clearErrors();
+            
+            clearTimeout(userIdTimeout);
+            userIdTimeout = setTimeout(() => {
+                if (state.userId.trim().length >= 3) {
+                    updateTestTypeCards();
+                }
+            }, 500);
+        });
+
+        elements.firstName.addEventListener('input', (e) => {
+            state.firstName = e.target.value;
+            clearErrors();
+        });
+
+        elements.lastName.addEventListener('input', (e) => {
+            state.lastName = e.target.value;
+            clearErrors();
+        });
+
+        document.querySelectorAll('.test-type-card').forEach(card => {
+            card.addEventListener('click', () => {
+                if (card.classList.contains('disabled')) {
+                    const testType = card.dataset.type;
+                    const attemptData = getUserAttemptData(state.userId, testType);
+                    elements.maxAttemptsMessage.innerHTML = `
+                        Ya has completado los <strong>${MAX_ATTEMPTS} intentos</strong> permitidos para la evaluación de <strong>${getTestTypeName(testType)}</strong>.<br><br>
+                        Tu calificación final asignada es: <strong>${attemptData.bestScore}/15</strong> (${((attemptData.bestScore/15)*100).toFixed(1)}%)
+                    `;
+                    elements.maxAttemptsModal.classList.remove('hidden');
+                    return;
+                }
+                
+                document.querySelectorAll('.test-type-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                state.testType = card.dataset.type;
+                clearErrors();
+            });
+        });
+
+        elements.closeMaxAttempts.addEventListener('click', () => {
+            elements.maxAttemptsModal.classList.add('hidden');
+        });
+
+        elements.startTest.addEventListener('click', async () => {
+            if (!validateForm()) return;
+            
+            showLoading('Verificando intentos...');
+            await fetchFromGoogleSheets();
+            hideLoading();
+            
+            const attemptData = getUserAttemptData(state.userId, state.testType);
+            if (attemptData.attempts >= MAX_ATTEMPTS) {
+                elements.maxAttemptsMessage.innerHTML = `
+                    Ya has completado los <strong>${MAX_ATTEMPTS} intentos</strong> permitidos para esta evaluación.<br><br>
+                    Tu calificación final asignada es: <strong>${attemptData.bestScore}/15</strong>
+                `;
+                elements.maxAttemptsModal.classList.remove('hidden');
+                return;
+            }
+            
+            state.questions = getQuestionsByType(state.testType);
+            state.currentQuestion = 0;
+            state.selectedAnswer = null;
+            state.userAnswers = [];
+            state.score = 0;
+            state.timeLeft = TIME_PER_QUESTION;
+            state.currentAttempt = attemptData.attempts + 1;
+            state.bestScore = attemptData.bestScore;
+            
+            elements.testTitle.textContent = getTestTypeName(state.testType);
+            elements.testSubtitle.textContent = `${state.firstName} ${state.lastName} (${state.userId}) - Intento ${state.currentAttempt}/${MAX_ATTEMPTS}`;
+            
+            showScreen('test');
+            displayQuestion();
+            startTimer();
+        });
+
+        // ============================================
+        // FUNCIONES DEL TEST
+        // ============================================
+        
+        function displayQuestion() {
+            const question = state.questions[state.currentQuestion];
+            const progress = ((state.currentQuestion + 1) / state.questions.length) * 100;
+            
+            elements.progressFill.style.width = `${progress}%`;
+            elements.questionNumber.textContent = `Pregunta ${state.currentQuestion + 1} de ${state.questions.length}`;
+            elements.questionText.textContent = question.question;
+            
+            elements.optionsContainer.innerHTML = question.options.map((option, idx) => `
+                <div class="option" data-option="${idx}">
+                    <span class="option-letter">${String.fromCharCode(65 + idx)}</span>
+                    <span>${option}</span>
+                </div>
+            `).join('');
+            
+            document.querySelectorAll('.option').forEach(option => {
+                option.addEventListener('click', () => selectOption(parseInt(option.dataset.option)));
+            });
+            
+            elements.nextQuestion.disabled = true;
+            elements.nextQuestion.textContent = state.currentQuestion === state.questions.length - 1 
+                ? 'Finalizar Evaluación' 
+                : 'Siguiente Pregunta';
+        }
+
+        function selectOption(optionIndex) {
+            state.selectedAnswer = optionIndex;
+            document.querySelectorAll('.option').forEach((opt, idx) => {
+                opt.classList.remove('selected');
+                if (idx === optionIndex) opt.classList.add('selected');
+            });
+            elements.nextQuestion.disabled = false;
+        }
+
+        function startTimer() {
+            state.timeLeft = TIME_PER_QUESTION;
+            updateTimerDisplay();
+            if (state.timerInterval) clearInterval(state.timerInterval);
+            state.timerInterval = setInterval(() => {
+                state.timeLeft--;
+                updateTimerDisplay();
+                if (state.timeLeft <= 0) handleNextQuestion();
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            elements.timer.textContent = `⏱️ ${formatTime(state.timeLeft)}`;
+            elements.timer.classList.remove('warning', 'danger');
+            if (state.timeLeft <= 10) elements.timer.classList.add('danger');
+            else if (state.timeLeft <= 20) elements.timer.classList.add('warning');
+        }
+
+        function handleNextQuestion() {
+            clearInterval(state.timerInterval);
+            const question = state.questions[state.currentQuestion];
+            state.userAnswers.push(state.selectedAnswer);
+            if (state.selectedAnswer === question.correct) state.score++;
+            state.selectedAnswer = null;
+            
+            if (state.currentQuestion < state.questions.length - 1) {
+                state.currentQuestion++;
+                displayQuestion();
+                startTimer();
+            } else {
+                finishTest();
+            }
+        }
+
+        elements.nextQuestion.addEventListener('click', handleNextQuestion);
+
+        async function finishTest() {
+            clearInterval(state.timerInterval);
+            showLoading('Guardando resultado...');
+            
+            const passed = state.score >= 11;
+            const percentage = ((state.score / 15) * 100).toFixed(1);
+            const newBestScore = Math.max(state.bestScore, state.score);
+            
+            // Preparar respuestas para guardar
+            const answersStr = state.questions.map((q, idx) => {
+                const userAns = state.userAnswers[idx];
+                const correct = userAns === q.correct ? '✓' : '✗';
+                return `P${idx+1}:${userAns !== null ? String.fromCharCode(65 + userAns) : '-'}${correct}`;
+            }).join(', ');
+            
+            // Enviar a Google Sheets
+            const dataToSend = {
+                odUserId: state.userId,
+                firstName: state.firstName,
+                lastName: state.lastName,
+                testType: state.testType,
+                attempt: state.currentAttempt,
+                score: state.score,
+                percentage: percentage,
+                passed: passed,
+                answers: answersStr
+            };
+            
+            await sendToGoogleSheets(dataToSend);
+            
+            // Actualizar datos locales
+            await fetchFromGoogleSheets();
+            const updatedData = getUserAttemptData(state.userId, state.testType);
+            
+            hideLoading();
+            
+            const remainingAttempts = MAX_ATTEMPTS - updatedData.attempts;
+            
+            elements.resultsTestType.textContent = getTestTypeName(state.testType);
+            elements.scoreCircle.className = `score-circle ${passed ? 'passed' : 'failed'}`;
+            elements.scoreValue.textContent = state.score;
+            elements.resultMessage.textContent = passed 
+                ? '¡Felicitaciones! Has aprobado la evaluación' 
+                : 'No has alcanzado el puntaje mínimo';
+            elements.resultMessage.style.color = passed ? 'var(--success)' : 'var(--error)';
+            
+            elements.attemptInfo.innerHTML = `
+                <p>Intento: <span class="highlight">${updatedData.attempts} de ${MAX_ATTEMPTS}</span></p>
+                <p>Tu mejor calificación: <span class="best-highlight">${updatedData.bestScore}/15</span> (${((updatedData.bestScore/15)*100).toFixed(1)}%)</p>
+                ${remainingAttempts > 0 ? `<p>Intentos restantes: <span class="highlight">${remainingAttempts}</span></p>` : ''}
+            `;
+            
+            if (remainingAttempts === 0) {
+                elements.retryTest.style.display = 'none';
+                elements.finishEvaluation.style.display = 'none';
+                elements.finalResultBox.classList.remove('hidden');
+                elements.finalResultText.innerHTML = `
+                    Se te ha asignado la calificación más alta obtenida:<br>
+                    <strong style="font-size: 1.3em; color: var(--success);">${updatedData.bestScore}/15 (${((updatedData.bestScore/15)*100).toFixed(1)}%)</strong><br>
+                    <span style="font-size: 0.9em;">Total de intentos realizados: ${updatedData.attempts}</span>
+                `;
+            } else {
+                elements.retryTest.style.display = 'block';
+                elements.finishEvaluation.style.display = 'block';
+                elements.finalResultBox.classList.add('hidden');
+            }
+            
+            elements.resultDetails.innerHTML = `
+                <strong>${state.firstName} ${state.lastName}</strong> (${state.userId})<br>
+                Porcentaje actual: ${percentage}%<br>
+                Puntaje mínimo requerido: 11/15 (73.3%)
+            `;
+            
+            showScreen('results');
+        }
+
+        // Reintentar evaluación
+        elements.retryTest.addEventListener('click', async () => {
+            showLoading('Verificando intentos...');
+            await fetchFromGoogleSheets();
+            hideLoading();
+            
+            const attemptData = getUserAttemptData(state.userId, state.testType);
+            if (attemptData.attempts >= MAX_ATTEMPTS) {
+                elements.maxAttemptsMessage.innerHTML = `
+                    Ya has completado los <strong>${MAX_ATTEMPTS} intentos</strong> permitidos.<br><br>
+                    Tu calificación final: <strong>${attemptData.bestScore}/15</strong>
+                `;
+                elements.maxAttemptsModal.classList.remove('hidden');
+                return;
+            }
+            
+            state.questions = getQuestionsByType(state.testType);
+            state.currentQuestion = 0;
+            state.selectedAnswer = null;
+            state.userAnswers = [];
+            state.score = 0;
+            state.timeLeft = TIME_PER_QUESTION;
+            state.currentAttempt = attemptData.attempts + 1;
+            state.bestScore = attemptData.bestScore;
+            
+            elements.testSubtitle.textContent = `${state.firstName} ${state.lastName} (${state.userId}) - Intento ${state.currentAttempt}/${MAX_ATTEMPTS}`;
+            
+            showScreen('test');
+            displayQuestion();
+            startTimer();
+        });
+
+        // Finalizar evaluación voluntariamente
+        elements.finishEvaluation.addEventListener('click', () => {
+            const attemptData = getUserAttemptData(state.userId, state.testType);
+            elements.confirmFinishMessage.innerHTML = `
+                ¿Está seguro que desea finalizar la evaluación?<br><br>
+                Se le asignará su mejor calificación: <strong>${attemptData.bestScore}/15</strong><br>
+                Aún le quedan <strong>${MAX_ATTEMPTS - attemptData.attempts} intentos</strong> disponibles.
+            `;
+            elements.confirmFinishModal.classList.remove('hidden');
+        });
+
+        elements.cancelFinish.addEventListener('click', () => {
+            elements.confirmFinishModal.classList.add('hidden');
+        });
+
+        elements.confirmFinish.addEventListener('click', () => {
+            elements.confirmFinishModal.classList.add('hidden');
+            const attemptData = getUserAttemptData(state.userId, state.testType);
+            
+            elements.retryTest.style.display = 'none';
+            elements.finishEvaluation.style.display = 'none';
+            elements.finalResultBox.classList.remove('hidden');
+            elements.finalResultText.innerHTML = `
+                Se te ha asignado la calificación más alta obtenida:<br>
+                <strong style="font-size: 1.3em; color: var(--success);">${attemptData.bestScore}/15 (${((attemptData.bestScore/15)*100).toFixed(1)}%)</strong><br>
+                <span style="font-size: 0.9em;">Total de intentos realizados: ${attemptData.attempts}</span>
+            `;
+            
+            elements.attemptInfo.innerHTML = `
+                <p>Evaluación finalizada</p>
+                <p>Tu calificación final: <span class="best-highlight">${attemptData.bestScore}/15</span></p>
+            `;
+        });
+
+        // ============================================
+        // REVISIÓN DE RESPUESTAS
+        // ============================================
+        
+        elements.reviewAnswers.addEventListener('click', () => {
+            showReviewScreen(state.questions, state.userAnswers, state.testType);
+        });
+
+        function showReviewScreen(questions, userAnswers, testType) {
+            elements.reviewTestType.textContent = getTestTypeName(testType);
+            
+            let correctCount = 0, incorrectCount = 0, unansweredCount = 0;
+            
+            questions.forEach((q, idx) => {
+                const userAnswer = userAnswers[idx];
+                if (userAnswer === null || userAnswer === undefined) unansweredCount++;
+                else if (userAnswer === q.correct) correctCount++;
+                else incorrectCount++;
+            });
+            
+            elements.reviewSummary.innerHTML = `
+                <div class="review-summary-item">
+                    <div class="review-summary-value correct">${correctCount}</div>
+                    <div class="review-summary-label">Correctas</div>
+                </div>
+                <div class="review-summary-item">
+                    <div class="review-summary-value incorrect">${incorrectCount}</div>
+                    <div class="review-summary-label">Incorrectas</div>
+                </div>
+                <div class="review-summary-item">
+                    <div class="review-summary-value total">${unansweredCount}</div>
+                    <div class="review-summary-label">Sin responder</div>
+                </div>
+            `;
+            
+            elements.reviewContainer.innerHTML = questions.map((q, idx) => {
+                const userAnswer = userAnswers[idx];
+                const isCorrect = userAnswer === q.correct;
+                const isUnanswered = userAnswer === null || userAnswer === undefined;
+                
+                let statusClass, statusText;
+                if (isUnanswered) { statusClass = 'unanswered'; statusText = 'Sin responder'; }
+                else if (isCorrect) { statusClass = 'correct'; statusText = '✓ Correcta'; }
+                else { statusClass = 'incorrect'; statusText = '✗ Incorrecta'; }
+                
+                return `
+                    <div class="review-question">
+                        <div class="review-question-header">
+                            <span class="review-question-number">Pregunta ${idx + 1}</span>
+                            <span class="review-status ${statusClass}">${statusText}</span>
+                        </div>
+                        <p class="review-question-text">${q.question}</p>
+                        <div class="review-options">
+                            ${q.options.map((option, optIdx) => {
+                                let optionClass = '';
+                                let indicator = '';
+                                if (optIdx === q.correct) {
+                                    optionClass = 'correct';
+                                    indicator = '<span class="review-option-indicator">Respuesta correcta</span>';
+                                } else if (optIdx === userAnswer && userAnswer !== q.correct) {
+                                    optionClass = 'incorrect';
+                                    indicator = '<span class="review-option-indicator">Tu respuesta</span>';
+                                }
+                                return `
+                                    <div class="review-option ${optionClass}">
+                                        <span class="review-option-letter">${String.fromCharCode(65 + optIdx)}</span>
+                                        <span class="review-option-text">${option}</span>
+                                        ${indicator}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            showScreen('review');
+        }
+
+        elements.backToResults.addEventListener('click', () => showScreen('results'));
+
+        elements.newTest.addEventListener('click', () => {
+            state.userId = '';
+            state.firstName = '';
+            state.lastName = '';
+            state.testType = null;
+            state.userAnswers = [];
+            elements.userId.value = '';
+            elements.firstName.value = '';
+            elements.lastName.value = '';
+            document.querySelectorAll('.test-type-card').forEach(c => {
+                c.classList.remove('selected');
+                c.classList.remove('disabled');
+                const badge = c.querySelector('.attempts-badge');
+                if (badge) badge.remove();
+                const score = c.querySelector('.best-score');
+                if (score) score.remove();
+            });
+            clearErrors();
+            showScreen('home');
+        });
+
+        // ============================================
+        // FUNCIONES DE ADMINISTRADOR
+        // ============================================
+        
+        elements.adminLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            elements.adminModal.classList.remove('hidden');
+            elements.adminPassword.value = '';
+            elements.adminPassword.focus();
+        });
+
+        elements.cancelAdmin.addEventListener('click', () => elements.adminModal.classList.add('hidden'));
+
+        elements.confirmAdmin.addEventListener('click', async () => {
+            if (elements.adminPassword.value === 'Luciana86') {
+                elements.adminModal.classList.add('hidden');
+                await showAdminPanel();
+            } else {
+                alert('Contraseña incorrecta');
+                elements.adminPassword.value = '';
+                elements.adminPassword.focus();
+            }
+        });
+
+        elements.adminPassword.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') elements.confirmAdmin.click();
+        });
+
+        elements.adminModal.addEventListener('click', (e) => {
+            if (e.target === elements.adminModal) elements.adminModal.classList.add('hidden');
+        });
+
+        async function showAdminPanel() {
+            showLoading('Cargando datos de Google Sheets...');
+            const success = await fetchFromGoogleSheets();
+            hideLoading();
+            
+            if (success) {
+                elements.syncStatus.className = 'sync-status online';
+                elements.syncText.textContent = 'Conectado a Google Sheets';
+            } else {
+                elements.syncStatus.className = 'sync-status offline';
+                elements.syncText.textContent = 'Error de conexión';
+            }
+            
+            // Consolidar por usuario y tipo
+            const consolidatedResults = {};
+            state.sheetsData.forEach(row => {
+                const odUserId = (row.Usuario || '').toLowerCase().trim();
+                const testType = row.TipoPrueba || '';
+                const puntajeStr = row.Puntaje || '0/15';
+                const puntaje = parseInt(puntajeStr.split('/')[0]) || 0;
+                
+                if (odUserId && testType) {
+                    const key = `${odUserId}_${testType}`;
+                    if (!consolidatedResults[key]) {
+                        consolidatedResults[key] = {
+                            odUserId: row.Usuario,
+                            firstName: row.Nombres,
+                            lastName: row.Apellidos,
+                            testType: testType,
+                            attempts: 0,
+                            bestScore: 0,
+                            lastDate: row.Timestamp
+                        };
+                    }
+                    consolidatedResults[key].attempts++;
+                    consolidatedResults[key].bestScore = Math.max(consolidatedResults[key].bestScore, puntaje);
+                    consolidatedResults[key].lastDate = row.Timestamp;
+                }
+            });
+            
+            const consolidatedArray = Object.values(consolidatedResults);
+            
+            const stats = {
+                total: state.sheetsData.length,
+                passed: consolidatedArray.filter(r => r.bestScore >= 11).length,
+                avgScore: consolidatedArray.length > 0 
+                    ? (consolidatedArray.reduce((sum, r) => sum + r.bestScore, 0) / consolidatedArray.length).toFixed(1)
+                    : 0
+            };
+            
+            elements.statTotal.textContent = stats.total;
+            elements.statPassed.textContent = stats.passed;
+            elements.statAvg.textContent = stats.avgScore;
+            
+            if (consolidatedArray.length > 0) {
+                elements.resultsTableContainer.innerHTML = `
+                    <div style="overflow-x: auto;">
+                        <table class="results-table">
+                            <thead>
+                                <tr>
+                                    <th>No.</th>
+                                    <th>Usuario</th>
+                                    <th>Nombres</th>
+                                    <th>Apellidos</th>
+                                    <th>Tipo</th>
+                                    <th>Intentos</th>
+                                    <th>Mejor Nota</th>
+                                    <th>Estado</th>
+                                    <th>Última Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${consolidatedArray.map((r, idx) => `
+                                    <tr>
+                                        <td>${idx + 1}</td>
+                                        <td><strong>${r.odUserId}</strong></td>
+                                        <td>${r.firstName}</td>
+                                        <td>${r.lastName}</td>
+                                        <td><span class="badge badge-${r.testType}">${getTestTypeName(r.testType)}</span></td>
+                                        <td>${r.attempts}/${MAX_ATTEMPTS}</td>
+                                        <td><strong>${r.bestScore}/15</strong></td>
+                                        <td><span class="badge ${r.bestScore >= 11 ? 'badge-passed' : 'badge-failed'}">${r.bestScore >= 11 ? 'APROBADO' : 'REPROBADO'}</span></td>
+                                        <td>${r.lastDate}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                elements.resultsTableContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📋</div>
+                        <p>No hay evaluaciones registradas</p>
+                    </div>
+                `;
+            }
+            
+            showScreen('admin');
+        }
+
+        elements.refreshData.addEventListener('click', () => showAdminPanel());
+
+        elements.exportExcel.addEventListener('click', () => {
+            if (state.sheetsData.length === 0) {
+                alert('No hay resultados para exportar');
+                return;
+            }
+
+            const consolidatedResults = {};
+            state.sheetsData.forEach(row => {
+                const odUserId = (row.Usuario || '').toLowerCase().trim();
+                const testType = row.TipoPrueba || '';
+                const puntajeStr = row.Puntaje || '0/15';
+                const puntaje = parseInt(puntajeStr.split('/')[0]) || 0;
+                
+                if (odUserId && testType) {
+                    const key = `${odUserId}_${testType}`;
+                    if (!consolidatedResults[key]) {
+                        consolidatedResults[key] = {
+                            odUserId: row.Usuario,
+                            firstName: row.Nombres,
+                            lastName: row.Apellidos,
+                            testType: testType,
+                            totalAttempts: 0,
+                            bestScore: 0,
+                            lastDate: row.Timestamp
+                        };
+                    }
+                    consolidatedResults[key].totalAttempts++;
+                    consolidatedResults[key].bestScore = Math.max(consolidatedResults[key].bestScore, puntaje);
+                    consolidatedResults[key].lastDate = row.Timestamp;
+                }
+            });
+
+            const data = Object.values(consolidatedResults).map((r, idx) => ({
+                'No.': idx + 1,
+                'Usuario': r.odUserId,
+                'Nombres': r.firstName,
+                'Apellidos': r.lastName,
+                'Tipo de Prueba': getTestTypeName(r.testType),
+                'Intentos': `${r.totalAttempts}/${MAX_ATTEMPTS}`,
+                'Mejor Calificación': r.bestScore + '/15',
+                'Porcentaje': ((r.bestScore / 15) * 100).toFixed(1) + '%',
+                'Estado': r.bestScore >= 11 ? 'APROBADO' : 'REPROBADO',
+                'Última Fecha': r.lastDate
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Resultados');
+            ws['!cols'] = [{wch: 5}, {wch: 15}, {wch: 20}, {wch: 20}, {wch: 25}, {wch: 10}, {wch: 15}, {wch: 12}, {wch: 12}, {wch: 20}];
+            XLSX.writeFile(wb, `Resultados_Evaluacion_BGR_${new Date().toISOString().split('T')[0]}.xlsx`);
+        });
+
+        elements.exitAdmin.addEventListener('click', () => {
+            state.userId = '';
+            state.firstName = '';
+            state.lastName = '';
+            state.testType = null;
+            elements.userId.value = '';
+            elements.firstName.value = '';
+            elements.lastName.value = '';
+            document.querySelectorAll('.test-type-card').forEach(c => {
+                c.classList.remove('selected');
+                c.classList.remove('disabled');
+                const badge = c.querySelector('.attempts-badge');
+                if (badge) badge.remove();
+                const score = c.querySelector('.best-score');
+                if (score) score.remove();
+            });
+            showScreen('home');
+        });
+    </script>
+</body>
+</html>
